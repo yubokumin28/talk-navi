@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>進行ナビ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font:"Zen Maru Gothic","Yu Gothic UI","Meiryo",sans-serif}
+body[data-theme=resort]{--bg:#fdfbf6;--panel:#ffffff;--ink:#16323a;--sub:#5b7077;--mute:#a9b5b8;--line:#e6dfd2;--acc:#0d7e87;--accbg:#d9f0f1;--hot:#ff7a59;--board:#fdfbf6}
+body[data-theme=dark]{--bg:#0d1420;--panel:#141e2e;--ink:#eef3f8;--sub:#9fb0c4;--mute:#56657a;--line:#24324a;--acc:#4fd3cc;--accbg:#173a43;--hot:#ff7a59;--board:#0d1420}
+body[data-theme=kokuban]{--bg:#5a4632;--panel:#23423a;--ink:#f7f4e8;--sub:#cfe0d2;--mute:#7f9a8c;--line:#3b5d52;--acc:#ffe066;--accbg:#2f574c;--hot:#ff9db0;--board:#23423a}
+body[data-theme=shiro]{--bg:#f3f4f6;--panel:#ffffff;--ink:#111827;--sub:#4b5563;--mute:#b0b7c3;--line:#e5e7eb;--acc:#2563eb;--accbg:#dbeafe;--hot:#f97316;--board:#ffffff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);overflow:hidden}
+#stage{position:absolute;inset:2vh 2vw;display:grid;grid-template-rows:auto 1fr auto auto;background:var(--board);border:2px solid var(--line);border-radius:20px;overflow:hidden}
+header{display:flex;justify-content:space-between;align-items:center;padding:1.4vh 2vw;border-bottom:2px solid var(--line);font-size:2.1vh;color:var(--sub)}
+header b{color:var(--ink);font-size:2.6vh}
+#pace{margin-left:1.2vw;padding:.2vh .8vw;border-radius:999px;font-size:1.8vh;background:var(--accbg);color:var(--acc)}
+#pace.late{background:var(--hot);color:#fff}
+main{display:grid;grid-template-columns:24vw 1fr;min-height:0}
+#map{border-right:2px solid var(--line);padding:2vh 1.2vw;overflow:hidden}
+.mi{display:flex;gap:.8vw;align-items:flex-start;padding:1.2vh .8vw;border-radius:12px;margin-bottom:.6vh;cursor:pointer;font-size:min(2.3vh,1.7vw);line-height:1.35}
+.mi .no{flex:none;width:3.6vh;height:3.6vh;border-radius:50%;display:grid;place-items:center;border:2px solid var(--mute);color:var(--mute);font-size:1.9vh}
+.mi small{display:block;font-size:1.6vh;color:var(--sub)}
+.mi.done{color:var(--mute)}.mi.done small{color:var(--mute)}
+.mi.done .no{background:var(--mute);color:var(--board);border-color:var(--mute)}
+.mi.now{background:var(--accbg);color:var(--ink)}
+.mi.now .no{background:var(--acc);border-color:var(--acc);color:var(--board)}
+.mi.now small{color:var(--acc)}
+#body{padding:3.5vh 0 0 2.4vw;display:grid;grid-template-columns:minmax(0,1fr) clamp(140px,26%,330px);min-height:0;position:relative}
+#col{display:flex;flex-direction:column;min-width:0;padding-bottom:2vh}
+#lane{position:relative;min-height:0}
+#tag{align-self:flex-start;font-size:2vh;padding:.5vh 1.2vw;border-radius:999px;background:var(--acc);color:var(--board)}
+#ttl{font-size:min(6.2vh,4.4vw);font-weight:700;margin:1.6vh 0 3vh;line-height:1.2}
+.pt{display:flex;gap:1.4vw;align-items:center;padding:2vh 1.6vw;margin-bottom:1.6vh;border-radius:16px;border:2px solid var(--line);font-size:min(3.4vh,2.3vw);transition:background-color .35s ease,border-color .35s ease,transform .35s ease,color .35s ease;cursor:pointer}
+.pt .n{flex:none;width:5vh;height:5vh;border-radius:12px;display:grid;place-items:center;background:var(--accbg);color:var(--acc);font-weight:700}
+#scr{display:flex;flex-wrap:wrap;gap:.8vw;align-items:center;margin-top:1vh;font-size:min(2.2vh,1.7vw);color:var(--sub)}
+#scr:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:.6vw;padding:.7vh 1vw;border-radius:12px;background:var(--panel);border:2px solid var(--line);color:var(--ink)}
+.chip kbd{background:var(--acc);color:var(--board);border:none;padding:.2vh .6vw;border-radius:8px;font-size:1.9vh}
+.ptscr{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.5vw;max-width:48%}
+.ptscr~.mx{margin-left:0}
+.pt .tx{min-width:0}
+.go{font:inherit;font-size:min(2vh,1.5vw);cursor:pointer;line-height:1.2}
+.go:hover{border-color:var(--acc);background:var(--accbg)}
+.go .nm{max-width:min(15vw,220px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.go .arrow{color:var(--board);background:var(--hot);border-radius:6px;padding:.1vh .5vw;font-size:.85em;font-weight:700}
+.hint{font-size:min(1.7vh,1.3vw);color:var(--sub);flex-basis:100%}
+/* コピー札(📋 の行): 押すと文がクリップボードへ */
+#tagrow{display:flex;align-items:center;gap:1vw;flex-wrap:wrap}
+#cps:empty{display:none}
+.cpopen{font:inherit;font-size:min(2.1vh,1.6vw);font-weight:700;padding:.8vh 1.2vw;border-radius:12px;border:2px dashed var(--acc);background:var(--panel);color:var(--acc);cursor:pointer}
+.cpopen:hover{background:var(--accbg)}
+#cpl{display:flex;flex-direction:column;gap:1.4vh;overflow-y:auto;min-height:0}
+.cpbox{display:flex;align-items:flex-start;gap:1vw;padding:1.2vh 1vw;border-radius:12px;background:var(--board);border:2px solid var(--line);color:var(--ink)}
+.cpbox .cpin{flex:1;min-width:0}
+.cpbox b{display:block;color:var(--acc);margin-bottom:.5vh}
+.cpbox .cptx{font-size:min(2vh,1.5vw);line-height:1.6;word-break:break-all;white-space:pre-wrap}
+.cpbtn{flex:none;font:inherit;font-weight:700;border:none;background:var(--acc);color:var(--board);border-radius:10px;padding:.6vh 1.2vw;cursor:pointer}
+.cpbtn.ok{background:var(--hot)}
+.addbtn.sm{font-size:min(1.7vh,1.3vw);padding:.4vh .7vw}
+.pt.cur{border-color:var(--acc);background:var(--panel);transform:translateX(.6vw);box-shadow:0 .6vh 0 var(--accbg)}
+.pt.cur .n{background:var(--acc);color:var(--board)}
+.chara{position:absolute;left:50%;pointer-events:none;filter:drop-shadow(0 .4vh .3vh rgba(0,0,0,.18));translate:-50% 0}
+.chara{max-width:100%;object-fit:contain}
+#cpoint{left:0;translate:0 0;object-position:left center;transition:top .45s cubic-bezier(.3,1.4,.5,1)}
+#cpoint.pop{animation:pop .45s ease}
+#cpose{transition:top .45s ease}
+#cpose.pop{animation:pop .45s ease}
+@keyframes pop{0%{transform:translateY(1.5vh) scale(.92);opacity:.4}100%{transform:none;opacity:1}}
+#mascot{display:none}
+#bar{position:relative;height:1.4vh;background:var(--line)}
+#barfill{position:absolute;left:0;top:0;bottom:0;background:var(--acc);transition:width .4s}
+.tick{position:absolute;top:0;bottom:0;width:3px;background:var(--board)}
+footer{padding:1.2vh 2vw;font-size:2vh;color:var(--sub);display:flex;justify-content:space-between;gap:2vw}
+footer #sum{color:var(--ink)}
+footer #keys{flex:none;white-space:nowrap;display:flex;gap:.5vw}
+.nb{font:inherit;font-size:min(1.8vh,1.4vw);padding:.4vh .8vw;border-radius:8px;border:1.5px solid var(--line);background:transparent;color:var(--sub);cursor:pointer}
+.nb:hover{border-color:var(--acc);color:var(--ink)}
+.nb{display:inline-flex;align-items:center;gap:.35vw}
+.nb img{height:min(3.2vh,2.3vw);width:auto}
+.panel{position:absolute;inset:8vh 10vw;background:var(--panel);color:var(--ink);border:2px solid var(--acc);border-radius:20px;padding:3vh 2.4vw;display:none;flex-direction:column;gap:1.4vh;z-index:5;font-size:2vh}
+.panel.on{display:flex}
+.panel h2{margin:0;font-size:2.8vh}
+.panel textarea{flex:1;font:2vh/1.6 var(--font);padding:1.4vh 1vw;border:2px solid var(--line);border-radius:12px;background:var(--board);color:var(--ink)}
+.panel table{border-collapse:collapse;font-size:2.2vh}
+.panel td,.panel th{border-bottom:1px solid var(--line);padding:.8vh 1vw;text-align:left}
+.panel .row{display:flex;gap:1vw;flex-wrap:wrap}
+.panel button{font:inherit;padding:1vh 1.4vw;border-radius:10px;border:2px solid var(--acc);background:var(--board);color:var(--ink);cursor:pointer}
+.panel button.main{background:var(--acc);color:var(--board)}
+kbd{border:1px solid var(--sub);border-radius:6px;padding:0 .5em;font-family:inherit}
+/* その場で直すモード */
+#ebar{display:none;align-items:center;gap:1vw;flex-wrap:wrap;margin:0 0 1.2vh;padding:.8vh 1vw;border-radius:12px;background:var(--accbg);color:var(--ink);font-size:min(1.9vh,1.4vw)}
+body.editing #ebar{display:flex}
+#ebar b{color:var(--acc)}
+#saveInfo{color:var(--sub);margin-left:auto}
+.donebtn{font:inherit;font-weight:700;border:none;background:var(--acc);color:var(--board);border-radius:10px;padding:.6vh 1.2vw;cursor:pointer}
+body.editing .ed{outline:2px dashed var(--acc);outline-offset:3px;border-radius:6px;cursor:text;min-width:1.5em}
+body.editing .ed:focus{outline-style:solid;background:var(--accbg)}
+body.editing .pt{cursor:default}
+.mx{font:inherit;font-size:min(1.6vh,1.2vw);border:1.5px solid var(--line);background:var(--panel);color:var(--sub);border-radius:8px;padding:.1vh .5vw;margin-left:auto;cursor:pointer;flex:none}
+.mx:hover{border-color:var(--hot);color:var(--hot)}
+.addbtn{font:inherit;font-size:min(2vh,1.5vw);border:2px dashed var(--acc);background:transparent;color:var(--acc);border-radius:12px;padding:.7vh 1vw;cursor:pointer}
+.grip{cursor:grab;color:var(--mute);font-size:min(2.8vh,2vw);padding:0 .2vw;user-select:none;flex:none}
+.minin{width:3.6em;font:inherit;font-size:inherit;padding:0 .3em;border:1.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.addurl{display:inline-flex;gap:.5vw;align-items:center}
+.addurl input{font:inherit;font-size:min(2vh,1.5vw);padding:.4vh .6vw;border:2px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);width:min(22vw,320px)}
+.dragging{opacity:.35}.over{outline:3px dashed var(--acc)!important;outline-offset:2px}
+#map .addbtn{width:100%;margin-top:.6vh}
+#toast{position:absolute;left:50%;bottom:6vh;transform:translateX(-50%);background:var(--ink);color:var(--board);padding:1vh 1.6vw;border-radius:999px;font-size:2vh;opacity:0;transition:opacity .3s;z-index:9}
+#toast.on{opacity:.92}
+</style>
+</head>
+<body data-theme="resort">
+<div id="stage">
+  <header><span><b id="title"></b> <span id="date"></span></span><span><span id="clock"></span><span id="pace"></span></span></header>
+  <main><nav id="map"></nav><section id="body"><div id="col"><div id="ebar"><b>直しているところ</b>文字をクリックして直す ・ ⋮⋮ や左の話題をつかんで並べ替え ・ 自動で保存<span id="saveInfo"></span><button class="donebtn" data-act="done">✓ 完了</button></div><div id="tagrow"><span id="tag"></span><span id="cps"></span></div><div id="ttl"></div><div id="pts"></div><div id="scr"></div></div><div id="lane"><img id="cpose" class="chara" alt=""><img id="cpoint" class="chara" alt=""></div><img id="mascot" alt=""></section></main>
+  <div id="bar"><div id="barfill"></div></div>
+  <footer><span>途中から来た方へ: <span id="sum"></span></span><span id="keys"><button class="nb" id="bPrev" data-ic="prev" title="1つ戻る(←)">◀ 戻る</button><button class="nb" id="bNext" data-ic="next" title="次へ(→)">次へ ▶</button><button class="nb" id="bEdit" data-ic="edit" title="この画面のままで直す(E)">✏️ 編集</button><button class="nb" id="bHome" data-ic="home" title="一覧へ(Q)">🏠 一覧</button><button class="nb" id="bTheme" title="見た目を切り替え(T)。リゾート・夜・黒板・白">🎨 見た目</button><button class="nb" id="bHelp" data-ic="help" title="操作の一覧(H)">？ 操作</button></span></footer>
+  <div class="panel" id="edit"><h2>中身を直す(<kbd>Esc</kbd> で閉じる)</h2><div>「## 話題 | 分」の下に「- 要点」を並べる。直した内容はこのPCに残る。</div><textarea id="ta" spellcheck="false"></textarea><div class="row"><button class="main" id="apply">反映する</button><button id="reset">ノートの内容に戻す</button></div></div>
+  <div class="panel" id="rec"><h2>今日の実績(<kbd>Esc</kbd> で閉じる)</h2><table id="rt"></table><div class="row"><button class="main" id="copy">Obsidian の記録用にコピー</button><button id="clearlog">時間の記録を消す</button></div></div>
+  <div class="panel" id="help"><h2>操作(<kbd>Esc</kbd> で閉じる)</h2><table>
+    <tr><td><kbd>→</kbd> <kbd>Space</kbd> <kbd>PageDown</kbd></td><td>次の要点(最後まで出たら次の話題)</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>PageUp</kbd></td><td>1つ戻る</td></tr>
+    <tr><td><kbd>↓</kbd> / <kbd>↑</kbd> ・ 数字キー</td><td>次の話題 / 前の話題 ・ その番号の話題へ飛ぶ</td></tr>
+    <tr><td><kbd>M</kbd></td><td>ミニ帯(デモ中も上に浮く小窓)</td></tr>
+    <tr><td><kbd>F</kbd></td><td>全画面</td></tr>
+    <tr><td><kbd>T</kbd></td><td>見た目を切り替え(リゾート・夜・黒板・白)</td></tr>
+    <tr><td><kbd>E</kbd></td><td>この画面のままで直す(もう一度押すか「完了」で戻る。直した内容は自動で保存)</td></tr>
+    <tr><td><kbd>N</kbd></td><td>今の話題の自分用メモ(画面共有中は相手にも見えるので注意)</td></tr>
+    <tr><td><kbd>R</kbd> / <kbd>Q</kbd></td><td>今日の実績 / 相談会ナビの一覧へ戻る</td></tr>
+    <tr><td>画面の札 ・ <kbd>Ctrl</kbd>+番号 ・ <kbd>O</kbd></td><td>その画面をデモの窓に出す(<kbd>O</kbd> は今の要点の画面。デモの窓が無ければ作る)</td></tr>
+    <tr><td><kbd>L</kbd></td><td>今日使う画面の一覧</td></tr>
+    <tr><td><kbd>C</kbd></td><td>コピーできる指示文(ノートの「📋 名前 | 文」の行。ある話題だけ)</td></tr>
+  </table></div>
+  <div class="panel" id="memo"><h2>📝 メモ: <span id="memoT"></span>(<kbd>Esc</kbd> で閉じる)</h2><div>自分用のメモ。画面共有中に開くと相手にも見えるので注意。<kbd>Ctrl</kbd>+<kbd>Enter</kbd> で保存。</div><textarea id="memoTa" spellcheck="false" placeholder="話した内容・質問されたこと・あとで調べること"></textarea><div class="row"><button class="main" id="memoSave">保存する</button><span id="memoInfo"></span></div></div>
+  <div class="panel" id="cpp"><h2>📋 コピーできる指示文(<kbd>Esc</kbd> で閉じる)</h2><div>「コピー」を押すと文がコピーされます。oVice のチャットや ChatGPT・Claude にそのまま貼れます。</div><div id="cpl"></div></div>
+  <div class="panel" id="tabs"><h2>今日使う画面(<kbd>Esc</kbd> で閉じる)</h2><div>要点の右の札を押すか、この窓で <kbd>Ctrl</kbd>+番号 を押すと、デモの窓にその画面が出ます(デモの窓が無ければ作ります)。</div><table id="tt"></table></div>
+  <div id="toast"></div>
+</div>
+<script id="src" type="text/plain">__NAVI_MD__</script>
+<script id="chara" type="application/json">__CHARA__</script>
+<script id="icons" type="application/json">__ICONS__</script>
+<script>
+const MASCOT="__MASCOT__";
+const NOTE="__NOTE__";  // 相談会ナビ(server.py)から開いた時だけノートの名前が入る
+const CHARA=JSON.parse(document.getElementById("chara").textContent||"{}");
+let lastPair="";
+// キャラは右の専用の列(lane)の中だけに置く。文字の列とは重ならない
+function placeChara(){
+  const pt=$("pts").children[st.k-1],cp=$("cpoint"),cs=$("cpose"),lane=$("lane");
+  const ok=pt&&CHARA.kun&&CHARA.chan&&CHARA.kun.point.length&&CHARA.chan.point.length;
+  if(!ok){cp.style.display=cs.style.display="none";return}
+  const kunPoints=(st.s+st.k)%2===1,who=kunPoints?CHARA.kun:CHARA.chan,other=kunPoints?CHARA.chan:CHARA.kun;
+  const pi=(st.s*3+st.k)%who.point.length,qi=(st.s*2+st.k)%other.joy.length,pair=(kunPoints?"k":"c")+pi+"-"+qi;
+  cp.src=who.point[pi];cs.src=other.joy[qi];
+  const L=lane.getBoundingClientRect(),r=pt.getBoundingClientRect();
+  const h=Math.min(innerHeight*.26,L.width/0.82,L.height*.48);
+  cp.style.height=cs.style.height=h+"px";cp.style.display=cs.style.display="";
+  let top=r.top-L.top+r.height/2-h*.42;top=Math.max(0,Math.min(L.height-h,top));
+  cp.style.top=top+"px";
+  // 喜ぶキャラは、指さすキャラから遠い側(上の端か下の端)へ。入る場所が無ければ出さない
+  const up=0,down=L.height-h,far=(top+h/2<L.height/2)?down:up;
+  const clash=Math.abs(far-top)<h*0.95;
+  cs.style.display=clash?"none":"";cs.style.top=far+"px";
+  if(pair!==lastPair){[cp,cs].forEach(e=>{e.classList.remove("pop");void e.offsetWidth;e.classList.add("pop")});lastPair=pair}
+}
+addEventListener("resize",()=>placeChara());
+addEventListener("load",()=>{$("cpoint").onload=placeChara;document.fonts&&document.fonts.ready.then(placeChara);setTimeout(placeChara,400)});
+const THEMES=["resort","dark","kokuban","shiro"],THEME_JA={resort:"リゾート",dark:"夜",kokuban:"黒板",shiro:"白"};
+const $=id=>document.getElementById(id);
+const ORIG=$("src").textContent.trim();
+function parse(md){
+  const fm={},secs=[];let body=md;
+  const m=md.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
+  if(m){body=md.slice(m[0].length);m[1].split("\n").forEach(l=>{const i=l.indexOf(":");if(i>0)fm[l.slice(0,i).trim()]=l.slice(i+1).trim().replace(/^["']|["']$/g,"")})}
+  body.split("\n").forEach(raw=>{const l=raw.trim();if(!l||l.startsWith("%%"))return;
+    let h=l.match(/^##\s+(.+?)(?:\s*[|｜]\s*(\d+)\s*分?)?$/);
+    if(h&&!l.startsWith("###")){secs.push({t:h[1].trim(),min:+(h[2]||10),p:[],links:[],copies:[],memo:[]});return}
+    let cp=l.match(/^(?:[-*]\s+)?📋\s*(.+?)\s*[|｜]\s*(.+)$/);if(cp&&secs.length){secs[secs.length-1].copies.push({name:cp[1].trim(),text:cp[2].trim()});return}
+    // 要点のすぐ下に字下げした 🔗 = その要点の画面(pt=要点の番号)。字下げ無し = 話題全体の画面
+    let u=l.match(/^(?:[-*]\s+)?🔗\s*(.+?)\s+(\S+:\/\/\S+)$/);if(u&&secs.length){const c=secs[secs.length-1];c.links.push({name:u[1].trim(),url:u[2],pt:/^[ \t]/.test(raw)&&c.p.length?c.p.length-1:null});return}
+    let mm=l.match(/^>\s?(?:メモ[:：]\s?)?(.*)$/);if(mm&&secs.length){secs[secs.length-1].memo.push(mm[1]);return}
+    let b=l.match(/^[-*・]\s+(.+)$/);if(b&&secs.length)secs[secs.length-1].p.push(b[1].trim())});
+  secs.forEach(s=>{if(!s.p.length)s.p=[" "];s.memo=s.memo.join("\n").trim()});
+  const tabs=[];secs.forEach(s=>s.links.forEach(k=>{let i=tabs.findIndex(t=>t.url===k.url);if(i<0){tabs.push(k);i=tabs.length-1}k.no=i+1}));
+  return{fm,secs,tabs};
+}
+const KEY="navi:"+((ORIG.match(/date:\s*(\S+)/)||[])[1]||"x");
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+let md=(!NOTE&&load(KEY+":md",null))||ORIG,D=parse(md);
+let st=load(KEY+":state",{s:0,k:1,theme:D.fm.theme||"resort"});
+let log=load(KEY+":log",[]);
+if(!THEMES.includes(st.theme))st.theme="resort";
+if(st.s>=D.secs.length)st={s:0,k:1,theme:st.theme};
+function hm(t){const[a,b]=(t||"8:00").split(":").map(Number);return a*60+(b||0)}
+function fmt(m){m=Math.round(m);return Math.floor(m/60)+":"+String(((m%60)+60)%60).padStart(2,"0")}
+function plan(){let c=hm(D.fm.start);return D.secs.map(s=>{const a=c;c+=s.min;return{a,b:c}})}
+function nowMin(){const d=new Date();return d.getHours()*60+d.getMinutes()+d.getSeconds()/60}
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function mark(){if(D.fm.date&&D.fm.date!==today())return;const last=log[log.length-1];if(!last||last.s!==st.s){log.push({s:st.s,t:Date.now()});save(KEY+":log",log)}}
+let pip=null;
+function esc(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+
+// ===== その場で直すモード(E キー / 下の「編集」ボタン) =====
+let editing=false,saveTimer=null;
+function toggleEdit(on){
+  editing=on===undefined?!editing:on;
+  if(!editing){document.activeElement&&document.activeElement.blur&&document.activeElement.blur();addingPt=null;D.secs.forEach(dropEmptyPts);recomputeTabs();if(saveTimer){clearTimeout(saveTimer);saveNow()}}
+  const b=$("bEdit");if(b){const u=ICONS.edit;b.innerHTML=(u?`<img src="${u}" alt="">`:"")+(editing?"完了":"編集")}
+  render();
+}
+// 直している間の要点の並び(空の印 " " だけなら空の並びにする)
+function editPts(c){if(c.p.length===1&&!c.p[0].trim())c.p=[];return c.p}
+// 要点を消す・動かした時に、要点に付けた画面も付け替える(order = 動かした後の並びに元の番号を入れたもの)
+function remapLinks(s,order){s.links.forEach(l=>{if(l.pt!=null){const k=order.indexOf(l.pt);l.pt=k<0?null:k}})}
+function dropEmptyPts(s){const o=[];s.p.forEach((x,i)=>{if(x.trim())o.push(i)});s.p=o.map(i=>s.p[i]);remapLinks(s,o)}
+let addingPt=null;  // 「＋画面」を押した要点の番号(URL の入力欄を出している所)
+function recomputeTabs(){
+  const tabs=[];D.secs.forEach(s=>s.links.forEach(k=>{let i=tabs.findIndex(t=>t.url===k.url);if(i<0){tabs.push(k);i=tabs.length-1}k.no=i+1}));D.tabs=tabs;
+  D.secs.forEach(s=>{if(!s.p.some(x=>x.trim()))s.p=[" "]});
+  st.s=Math.max(0,Math.min(D.secs.length-1,st.s));st.k=Math.max(1,Math.min(D.secs[st.s].p.length,st.k));
+}
+function dumpMd(){
+  const fm=D.fm,order=["type","date","title","start","end","theme","chara"],keys=[...order,...Object.keys(fm).filter(k=>!order.includes(k))];
+  const o=["---",...keys.filter(k=>fm[k]).map(k=>k==="start"||k==="end"?`${k}: "${fm[k]}"`:`${k}: ${fm[k]}`),"---","",`# ${fm.title||""}`,""];
+  D.secs.forEach(s=>{o.push(`## ${s.t} | ${s.min}`);const kept=[];
+    s.p.forEach((x,i)=>{if(!x.trim())return;kept.push(i);o.push("- "+x);s.links.filter(l=>l.pt===i).forEach(l=>o.push(`  - 🔗 ${l.name} ${l.url}`))});
+    s.links.filter(l=>!kept.includes(l.pt)).forEach(l=>o.push(`🔗 ${l.name} ${l.url}`));
+    (s.copies||[]).forEach(c=>o.push(`📋 ${c.name} | ${c.text}`));
+    const m=(s.memo||"").split("\n");if(m.some(x=>x.trim())){o.push("> メモ: "+m[0]);m.slice(1).forEach(x=>o.push("> "+x))}o.push("")});
+  return o.join("\n");
+}
+function scheduleSave(){$("saveInfo").textContent="…";clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,900)}
+async function saveNow(){
+  saveTimer=null;
+  if(NOTE){
+    const body={fm:D.fm,secs:D.secs.map(s=>({title:s.t.trim()||"(題名なし)",min:s.min,points:s.p.map(x=>x.trim()?x:""),links:s.links.map(l=>({name:l.name,url:l.url,pt:l.pt??null})),copies:s.copies||[],memo:s.memo||""}))};
+    const r=await fetch("/api/note?n="+encodeURIComponent(NOTE),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json()).catch(()=>({}));
+    $("saveInfo").textContent=r.ok?"✓ Obsidian に保存しました":"⚠ 保存できませんでした(相談会ナビが終了していませんか)";
+  }else{md=dumpMd();save(KEY+":md",md);$("saveInfo").textContent="✓ このPCに残しました"}
+}
+function nameFromUrl(u){
+  const known={"chatgpt.com":"ChatGPT","claude.ai":"Claude","notebooklm.google.com":"NotebookLM","github.com":"GitHub","gemini.google.com":"Gemini","www.youtube.com":"YouTube","libecity.com":"リベシティ"};
+  try{const h=new URL(u).hostname;return known[h]||(h.endsWith(".microcms.io")?"microCMS":h.replace(/^www\./,""))}catch(e){return u}
+}
+// pt = 要点の番号(その要点の画面)。null なら話題全体の画面
+function addLink(pt=null){
+  const inp=$(pt==null?"newUrl":"newUrlPt"),u=(inp&&inp.value||"").trim();
+  if(!/^https?:\/\/\S+$/.test(u)){toast("https:// で始まる URL を貼ってください");return}
+  D.secs[st.s].links.push({name:nameFromUrl(u),url:u,pt});addingPt=null;recomputeTabs();render();scheduleSave();toast("画面を足しました(名前はクリックで直せます)");
+}
+// 画面の札を押した時: 相談会ナビがデモの窓を前に出し、そのタブへ切り替える(窓が無ければ作る)
+async function openScreen(url,name){
+  if(!NOTE){window.open(url,"talknavi_screen");return}
+  toast("デモの窓に出しています…");
+  const r=await fetch("/api/show?n="+encodeURIComponent(NOTE),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})}).then(r=>r.json()).catch(()=>({}));
+  toast(r.ok?`デモの窓に出しました: ${name}`:"⚠ "+(r.why||"出せませんでした(相談会ナビが終了していませんか)"));
+}
+// 今の要点の画面(無ければ話題全体の画面)
+function curLinks(){const c=D.secs[st.s],a=c.links.filter(l=>l.pt===st.k-1);return a.length?a:c.links.filter(l=>l.pt==null)}
+function focusEnd(sel){const el=document.querySelector(sel);if(!el)return;el.focus();const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+// 文字を直した時: 画面は描き直さず(カーソルが飛ぶため)、中身だけ書き換えて保存を予約する
+document.addEventListener("input",e=>{
+  const t=e.target,k=t.dataset&&t.dataset.e;if(!editing||!k)return;
+  const v=k==="min"?t.value:t.textContent;
+  if(k==="title")D.fm.title=v;
+  else if(k==="t"){const i=+t.dataset.i;D.secs[i].t=v;document.querySelectorAll(`[data-e="t"][data-i="${i}"]`).forEach(x=>{if(x!==t)x.textContent=v})}
+  else if(k==="p"){editPts(D.secs[st.s])[+t.dataset.j]=v}
+  else if(k==="ln")D.secs[st.s].links[+t.dataset.j].name=v;
+  else if(k==="min"){D.secs[+t.dataset.i].min=Math.max(1,+v||1)}
+  scheduleSave();
+});
+document.addEventListener("change",e=>{if(editing&&e.target.dataset&&e.target.dataset.e==="min")render()});
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;e.preventDefault();e.stopPropagation();
+  const a=b.dataset.act,c=D.secs[st.s];
+  if(a==="done"){toggleEdit(false);return}
+  if(a==="copyopen"){b.blur();panel("cpp");return}
+  if(a==="copytext"){const t=(c.copies||[])[+b.dataset.j];if(!t)return;b.blur();
+    const ok=()=>{b.textContent="✓ コピーしました";b.classList.add("ok");setTimeout(()=>{b.textContent="コピー";b.classList.remove("ok")},1600)};
+    const fb=()=>{const ta=document.createElement("textarea");ta.value=t.text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();ok()};
+    navigator.clipboard?navigator.clipboard.writeText(t.text).then(ok,fb):fb();return}
+  if(a==="go"){if(b.dataset.k){st.k=+b.dataset.k;render()}b.blur();openScreen(b.dataset.url,b.dataset.name);return}
+  if(a==="addptlink"){addingPt=+b.dataset.j;render();const i=$("newUrlPt");i&&i.focus();return}
+  if(a==="addptlinkok"){addLink(addingPt);return}
+  if(a==="addsec"){D.secs.splice(st.s+1,0,{t:"新しい話題",min:10,p:[" "],links:[],memo:""});st.s++;st.k=1;recomputeTabs();render();scheduleSave();focusEnd(`#ttl [data-e="t"]`);return}
+  if(a==="delsec"){const i=+b.dataset.i;if(D.secs.length<=1){toast("話題は1つ以上必要です");return}if(!confirm(`「${D.secs[i].t}」を消しますか?`))return;D.secs.splice(i,1);if(st.s>=i&&st.s>0)st.s--;st.k=1;recomputeTabs();render();scheduleSave();return}
+  if(a==="addpt"){const ps=editPts(c);ps.push("新しい要点");st.k=ps.length;render();scheduleSave();focusEnd(`#pts .pt:nth-child(${ps.length}) [data-e="p"]`);return}
+  if(a==="delpt"){const j=+b.dataset.j,ps=editPts(c),o=ps.map((_,i)=>i);ps.splice(j,1);o.splice(j,1);remapLinks(c,o);recomputeTabs();render();scheduleSave();return}
+  if(a==="dellink"){c.links.splice(+b.dataset.j,1);recomputeTabs();render();scheduleSave();return}
+  if(a==="addlink")addLink();
+},true);
+// つかんで並べ替え: 要点は ⋮⋮、話題は左の地図の項目
+let drag=null;
+document.addEventListener("dragstart",e=>{
+  if(!editing)return;const t=e.target;
+  if(t.dataset&&t.dataset.dragpt!==undefined){drag={kind:"pt",from:+t.dataset.dragpt};t.closest(".pt").classList.add("dragging")}
+  else if(t.dataset&&t.dataset.dragsec!==undefined){drag={kind:"sec",from:+t.dataset.dragsec};t.classList.add("dragging")}
+  else return;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","x");
+});
+function dropEl(e){return drag?(drag.kind==="pt"?e.target.closest("#pts .pt"):e.target.closest("#map .mi")):null}
+document.addEventListener("dragover",e=>{const el=dropEl(e);if(!el)return;e.preventDefault();document.querySelectorAll(".over").forEach(x=>x!==el&&x.classList.remove("over"));el.classList.add("over")});
+document.addEventListener("dragend",()=>{drag=null;document.querySelectorAll(".over,.dragging").forEach(x=>x.classList.remove("over","dragging"))});
+document.addEventListener("drop",e=>{
+  const el=dropEl(e);if(!el)return;e.preventDefault();
+  if(drag.kind==="pt"){const c=D.secs[st.s],ps=editPts(c),to=+el.dataset.k-1,o=ps.map((_,i)=>i);const[v]=ps.splice(drag.from,1);ps.splice(to,0,v);o.splice(to,0,o.splice(drag.from,1)[0]);remapLinks(c,o);st.k=to+1}
+  else{const cur=D.secs[st.s],to=+el.dataset.i;const[v]=D.secs.splice(drag.from,1);D.secs.splice(to,0,v);st.s=D.secs.indexOf(cur)}
+  drag=null;recomputeTabs();render();scheduleSave();
+});
+
+function render(){
+  document.body.dataset.theme=st.theme;
+  const S=D.secs,c=S[st.s],P=plan();
+  const E=editing,ce=(e,extra="")=>E?` class="ed" contenteditable="plaintext-only" spellcheck="false" data-e="${e}" ${extra}`:"";
+  document.body.classList.toggle("editing",E);
+  $("title").innerHTML=`<span${ce("title")}>${esc(D.fm.title||"進行ナビ")}</span>`;$("date").textContent=D.fm.date||"";
+  document.title=(D.fm.title||"進行ナビ")+" | "+c.t;
+  $("map").innerHTML=S.map((x,i)=>`<div class="mi ${i<st.s?"done":i===st.s?"now":""}" data-i="${i}"${E?` draggable="true" data-dragsec="${i}"`:""}><span class="no">${i<st.s?"✓":i+1}</span><span><span${ce("t",`data-i="${i}"`)}>${esc(x.t)}</span><small>${fmt(P[i].a)}〜 ${E?`<input class="minin" type="number" min="1" max="120" data-e="min" data-i="${i}" value="${x.min}">`:x.min}分${x.links.length?" ・画面 "+x.links.map(k=>k.no).join(","):""}${E?` <button class="mx" data-act="delsec" data-i="${i}" title="この話題を消す">✕</button>`:""}</small></span></div>`).join("")+(E?`<button class="addbtn" data-act="addsec">＋ 話題を足す</button>`:"");
+  $("tag").textContent=`いまここ ${st.s+1} / ${S.length}`;
+  $("ttl").innerHTML=E?`<span${ce("t",`data-i="${st.s}"`)}>${esc(c.t)}</span>`:esc(c.t);
+  const real=E?editPts(c):c.p;
+  // 画面の札。普段は押すとデモの窓に出る。直している間は名前を直す・✕で外す
+  const L=c.links.map((k,j)=>({k,j}));
+  const chip=(o,ptNo)=>E?`<span class="chip"><kbd>${o.k.no}</kbd><span${ce("ln",`data-j="${o.j}"`)}>${esc(o.k.name)}</span><button class="mx" data-act="dellink" data-j="${o.j}" title="この画面を外す">✕</button></span>`
+    :`<button class="chip go" data-act="go" data-url="${esc(o.k.url)}" data-name="${esc(o.k.name)}"${ptNo?` data-k="${ptNo}"`:""} title="デモの窓にこの画面を出す(Ctrl+${o.k.no} でも出せます)"><kbd>${o.k.no}</kbd><span class="nm">${esc(o.k.name)}</span><span class="arrow">開く</span></button>`;
+  const ptScr=i=>{const a=L.filter(o=>o.k.pt===i);
+    const add=!E?"":addingPt===i?`<span class="addurl"><input id="newUrlPt" placeholder="URLを貼って Enter"><button class="addbtn" data-act="addptlinkok">足す</button></span>`:`<button class="addbtn sm" data-act="addptlink" data-j="${i}" title="この要点で見せる画面を足す">＋画面</button>`;
+    return a.length||add?`<span class="ptscr">${a.map(o=>chip(o,i+1)).join("")}${add}</span>`:""};
+  $("pts").innerHTML=real.map((p,i)=>`<div class="pt ${i===st.k-1?"cur":""}" data-k="${i+1}">${E?`<span class="grip" draggable="true" data-dragpt="${i}" title="つかんで並べ替え">⋮⋮</span>`:""}<span class="n">${i+1}</span><span class="tx"><span${ce("p",`data-j="${i}"`)}>${esc(p)}</span></span>${ptScr(i)}${E?`<button class="mx" data-act="delpt" data-j="${i}" title="この要点を消す">✕</button>`:""}</div>`).join("")+(E&&real.length<3?`<button class="addbtn" data-act="addpt">＋ 要点を足す</button>`:"");
+  const secL=L.filter(o=>o.k.pt==null);
+  $("scr").innerHTML=E?"話題全体の画面: "+secL.map(o=>chip(o)).join("")+`<span class="addurl"><input id="newUrl" placeholder="URLを貼って Enter"><button class="addbtn" data-act="addlink">＋ 画面を足す</button></span>`
+    :(secL.length?"話題全体の画面 "+secL.map(o=>chip(o)).join(""):"")+(L.length?`<span class="hint">札を押すと、デモの窓にその画面が出ます</span>`:"");
+  const cps=c.copies||[];
+  $("cps").innerHTML=cps.length?`<button class="cpopen" data-act="copyopen">📋 コピーできる指示文 ${cps.length}つ(C)</button>`:"";
+  $("cpl").innerHTML=cps.map((x,j)=>`<div class="cpbox"><div class="cpin"><b>${esc(x.name)}</b><div class="cptx">${esc(x.text)}</div></div><button class="cpbtn" data-act="copytext" data-j="${j}">コピー</button></div>`).join("");
+  placeChara();
+  $("sum").textContent=st.s===0?"これから始まります":st.s<=2?`${S.slice(0,st.s).map(x=>x.t).join(" → ")} まで済み。今は「${c.t}」`:`${st.s}つの話が済み(直前は「${S[st.s-1].t}」)。今は「${c.t}」`;
+  const tot=P[P.length-1].b-P[0].a,pos=P[st.s].a-P[0].a+c.min*Math.min(st.k,c.p.length)/c.p.length;
+  $("barfill").style.width=Math.min(100,pos/tot*100)+"%";
+  $("bar").querySelectorAll(".tick").forEach(e=>e.remove());
+  P.slice(1).forEach(p=>{const e=document.createElement("div");e.className="tick";e.style.left=((p.a-P[0].a)/tot*100)+"%";$("bar").appendChild(e)});
+  if(MASCOT&&!MASCOT.startsWith("__")){$("mascot").src=MASCOT}else{$("mascot").style.display="none"}
+  tick();save(KEY+":state",st);renderMini();
+}
+function tick(){
+  const P=plan(),n=nowMin(),cur=P[st.s];
+  $("clock").textContent=`今 ${fmt(n)} ・ 予定 ${fmt(cur.a)}〜${fmt(cur.b)}`;
+  const inSession=n>=hm(D.fm.start)-15&&n<=hm(D.fm.end)+30;
+  const d=Math.round(n-cur.a-(D.secs[st.s].min*(st.k-1)/Math.max(1,D.secs[st.s].p.length)));
+  const pace=$("pace");
+  if(!inSession){pace.textContent="";pace.style.display="none";return}
+  pace.style.display="";
+  pace.className=d>5?"late":"";
+  pace.textContent=d>5?`予定より ${d}分 押し`:d<-5?`予定より ${-d}分 早い`:"予定どおり";
+}
+function go(s,k){const S=D.secs;s=Math.max(0,Math.min(S.length-1,s));st.s=s;st.k=Math.max(1,Math.min(S[s].p.length,k));mark();render()}
+function next(){const c=D.secs[st.s];if(st.k<c.p.length){st.k++;render()}else if(st.s<D.secs.length-1)go(st.s+1,1);else toast("最後の話題です")}
+function prev(){if(st.k>1){st.k--;render()}else if(st.s>0)go(st.s-1,D.secs[st.s-1].p.length)}
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),1600)}
+const PANELS=["edit","rec","help","tabs","memo","cpp"];
+function openMemo(){$("memoT").textContent=`${st.s+1}. ${D.secs[st.s].t}`;$("memoTa").value=(!NOTE&&load(KEY+":memo"+st.s,null))||D.secs[st.s].memo||"";$("memoInfo").textContent=NOTE?"Obsidian のノートに保存します":"このPCのブラウザにだけ残ります(相談会ナビから開くとノートに保存)";panel("memo");if($("memo").classList.contains("on"))$("memoTa").focus()}
+async function saveMemo(){
+  const i=st.s,text=$("memoTa").value;D.secs[i].memo=text;
+  if(NOTE){
+    const r=await fetch("/api/memo?n="+encodeURIComponent(NOTE),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({i,text})}).then(r=>r.json()).catch(()=>({}));
+    toast(r.ok?"メモを保存しました":"保存できませんでした");if(!r.ok)return;
+  }else{save(KEY+":memo"+i,text);toast("メモをこのPCに残しました")}
+  panel(null);
+}
+function panel(id){PANELS.forEach(p=>$(p).classList.toggle("on",p===id&&!$(p).classList.contains("on")))}
+function anyPanel(){return PANELS.some(p=>$(p).classList.contains("on"))}
+function tabTable(){
+  $("tt").innerHTML=D.tabs.length?"<tr><th>キー</th><th>画面</th><th>使う話題</th></tr>"+D.tabs.map((t,i)=>`<tr><td><kbd>Ctrl+${i+1}</kbd></td><td>${t.name}</td><td>${D.secs.map((s,j)=>s.links.some(k=>k.no===i+1)?(j+1)+". "+s.t:"").filter(Boolean).join(" / ")}</td></tr>`).join(""):"<tr><td>ノートに「🔗 名前 URL」の行がまだありません</td></tr>";
+}
+function recTable(){
+  const P=plan(),act=D.secs.map(()=>0);
+  log.forEach((e,i)=>{const end=log[i+1]?log[i+1].t:Date.now();if(act[e.s]!==undefined)act[e.s]+=(end-e.t)/60000});
+  $("rt").innerHTML="<tr><th>話題</th><th>予定</th><th>実際</th><th>差</th></tr>"+D.secs.map((s,i)=>{const a=Math.round(act[i]),df=a-s.min;return`<tr><td>${i+1}. ${s.t}</td><td>${s.min}分</td><td>${log.length?a+"分":"-"}</td><td>${log.length?(df>0?"+":"")+df+"分":"-"}</td></tr>`}).join("");
+  return act;
+}
+function copyRec(){
+  const act=recTable();
+  const over=D.secs.map((s,i)=>({t:s.t,d:Math.round(act[i])-s.min})).filter(x=>Math.abs(x.d)>=3).map(x=>`${x.t} ${x.d>0?"+":""}${x.d}分`).join("、")||"ほぼ予定どおり";
+  const line=`| ${(D.fm.title||"").replace(/\s*クロコ相談会/,"")} | ${D.fm.date||""} | (うまくいった所) | 時間: ${over} |`;
+  navigator.clipboard.writeText(line).then(()=>toast("コピーしました。Obsidian の「回ごとの記録」に貼れます"),()=>toast("コピーできませんでした"));
+}
+async function openMini(){
+  if(pip&&!pip.closed){pip.close();pip=null;return}
+  const css=`body{margin:0;font-family:${getComputedStyle(document.body).getPropertyValue("--font")};background:var(--board);color:var(--ink);padding:10px 14px;overflow:hidden}`;
+  try{
+    if("documentPictureInPicture" in window){pip=await documentPictureInPicture.requestWindow({width:480,height:170})}
+    else{pip=window.open("","navimini","width=460,height=150,popup=yes")}
+  }catch(e){pip=window.open("","navimini","width=460,height=150,popup=yes")}
+  if(!pip){toast("ミニ帯を開けませんでした");return}
+  const d=pip.document;d.head.innerHTML=`<meta charset="utf-8"><title>進行ナビ ミニ</title><style>${[...document.styleSheets].map(s=>{try{return[...s.cssRules].map(r=>r.cssText).join("")}catch(e){return""}}).join("")}${css}</style>`;
+  d.body.innerHTML=`<div id="m1" style="font-size:20px;font-weight:700"></div><div id="m2" style="font-size:15px;color:var(--sub);margin-top:2px"></div><div id="m4" style="font-size:14px;color:var(--acc);margin-top:2px"></div><div style="height:8px;background:var(--line);border-radius:4px;margin-top:8px"><div id="m3" style="height:8px;background:var(--acc);border-radius:4px"></div></div>`;
+  d.addEventListener("keydown",onKey);pip.addEventListener("pagehide",()=>{pip=null});renderMini();
+}
+function renderMini(){
+  if(!pip||pip.closed)return;const d=pip.document,c=D.secs[st.s];d.body.dataset.theme=st.theme;
+  const m1=d.getElementById("m1");if(!m1)return;
+  m1.textContent=`いまここ ${st.s+1}/${D.secs.length}  ${c.t}`;
+  d.getElementById("m2").textContent=`${st.k}/${c.p.length}  ${c.p[st.k-1]}`;
+  const cl=curLinks();d.getElementById("m4").textContent=cl.length?"画面: "+cl.map(k=>`${k.no} ${k.name}`).join(" ・ ")+"(O で出す)":"";
+  d.getElementById("m3").style.width=$("barfill").style.width;
+}
+function onKey(e){
+  if(e.target.tagName==="TEXTAREA"){if(e.key==="Escape")panel(null);else if(e.target.id==="memoTa"&&e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();saveMemo()}return}
+  // 文字を直している最中は、矢印などで画面が進まないようにする(Enter・Esc で確定)
+  if(e.target.isContentEditable||e.target.tagName==="INPUT"){
+    if(e.isComposing)return;
+    if(e.key==="Enter"){e.preventDefault();if(e.target.id==="newUrl")addLink();else if(e.target.id==="newUrlPt")addLink(addingPt);else e.target.blur()}
+    else if(e.key==="Escape"){if(e.target.id==="newUrlPt"){addingPt=null;render()}else e.target.blur()}
+    return;
+  }
+  const k=e.key;
+  // 進行ナビの窓で Ctrl+番号 → その番号の画面をデモの窓に出す(この窓にはタブが無いので、代わりに出しに行く)
+  if((e.ctrlKey||e.metaKey)&&/^[1-9]$/.test(k)){const t=D.tabs[+k-1];if(t){e.preventDefault();openScreen(t.url,t.name)}else toast(`画面 ${k} はありません`);return}
+  if((k==="o"||k==="O")&&!anyPanel()){const a=curLinks();if(a.length)openScreen(a[0].url,a[0].name);else toast("この要点・話題には画面がありません");return}
+  if(k==="Escape"){if(anyPanel())panel(null);else if(editing)toggleEdit(false);return}
+  if(anyPanel()&&!"eErRhHlLnN".includes(k))return;
+  if(["ArrowRight"," ","PageDown","Enter"].includes(k)){e.preventDefault();next()}
+  else if(["ArrowLeft","PageUp","Backspace"].includes(k)){e.preventDefault();prev()}
+  else if(k==="ArrowDown"){e.preventDefault();go(st.s+1,1)}
+  else if(k==="ArrowUp"){e.preventDefault();go(st.s-1,1)}
+  else if(/^[1-9]$/.test(k)&&+k<=D.secs.length)go(+k-1,1);
+  else if(k==="t"||k==="T"){st.theme=THEMES[(THEMES.indexOf(st.theme)+1)%THEMES.length];render();toast("見た目: "+THEME_JA[st.theme])}
+  else if(k==="e"||k==="E"){e.preventDefault();toggleEdit()}
+  else if(k==="n"||k==="N"){e.preventDefault();openMemo()}
+  else if((k==="Home"||k==="q"||k==="Q")&&NOTE){location.href="/"}
+  else if(k==="r"||k==="R"){recTable();panel("rec")}
+  else if(k==="h"||k==="H")panel("help");
+  else if(k==="l"||k==="L"){tabTable();panel("tabs")}
+  else if((k==="c"||k==="C")&&!e.ctrlKey&&!e.metaKey&&(D.secs[st.s].copies||[]).length)panel("cpp");
+  else if(k==="m"||k==="M")openMini();
+  else if(k==="f"||k==="F"){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}
+}
+document.addEventListener("keydown",onKey);
+$("map").addEventListener("click",e=>{if(editing&&e.target.closest("[contenteditable],input,button"))return;const el=e.target.closest(".mi");if(el)go(+el.dataset.i,1)});
+$("pts").addEventListener("click",e=>{if(editing&&e.target.closest("[contenteditable],button,.grip,input"))return;const el=e.target.closest(".pt");if(el){st.k=+el.dataset.k;render()}});
+$("apply").onclick=()=>{const v=$("ta").value;const p=parse(v);if(!p.secs.length){toast("「## 話題 | 分」の行が1つもありません");return}md=v;D=p;save(KEY+":md",md);if(st.s>=D.secs.length)st.s=0;st.k=1;panel(null);render();toast("反映しました")};
+$("reset").onclick=()=>{md=ORIG;D=parse(md);try{localStorage.removeItem(KEY+":md")}catch(e){}$("ta").value=md;st.s=Math.min(st.s,D.secs.length-1);st.k=1;render();toast("ノートの内容に戻しました")};
+$("copy").onclick=copyRec;
+$("memoSave").onclick=saveMemo;
+// 下の帯のボタン(キーを使わない時用)。押した後もキー操作が効くようにフォーカスを外す
+const key=k=>onKey({key:k,target:document.body,preventDefault(){},ctrlKey:false,metaKey:false});
+[["bPrev","ArrowLeft"],["bNext","ArrowRight"],["bEdit","e"],["bHome","q"],["bTheme","t"],["bHelp","h"]].forEach(([id,k])=>{$(id).onclick=e=>{e.currentTarget.blur();key(k)}});
+if(!NOTE)$("bHome").style.display="none";
+// アイコンがあれば絵+短い言葉にする(無ければ文字のまま)
+const ICONS=JSON.parse(document.getElementById("icons").textContent||"{}");
+const LABEL={prev:"戻る",next:"次へ",edit:"編集",home:"一覧",help:"操作"};
+document.querySelectorAll(".nb[data-ic]").forEach(b=>{const u=ICONS[b.dataset.ic];if(u)b.innerHTML=`<img src="${u}" alt="">${LABEL[b.dataset.ic]}`});
+$("clearlog").onclick=()=>{log=[];save(KEY+":log",log);recTable();toast("時間の記録を消しました")};
+setInterval(()=>{tick();renderMini()},15000);
+mark();render();
+</script>
+</body>
+</html>

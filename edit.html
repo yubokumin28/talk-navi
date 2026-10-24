@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>相談会ナビ 編集</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fdfbf6;--panel:#fff;--ink:#16323a;--sub:#5b7077;--mute:#a9b5b8;--line:#e6dfd2;--acc:#0d7e87;--accbg:#d9f0f1;--hot:#ff7a59;--memo:#fff7e0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Maru Gothic","Yu Gothic UI","Meiryo",sans-serif;padding-bottom:90px}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:2px solid var(--line);flex-wrap:wrap}
+header h1{margin:0;font-size:20px;flex:1}
+main{padding:16px 20px;max-width:1000px;margin:0 auto}
+label{font-size:13px;color:var(--sub);display:block;margin-bottom:3px}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:7px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+.grid{display:grid;gap:10px}
+.top{grid-template-columns:2fr 1.2fr .8fr .8fr 1fr .9fr;background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:16px}
+.sec{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.sec-head{display:grid;grid-template-columns:42px 1fr 90px auto;gap:10px;align-items:end;margin-bottom:10px}
+.no{width:36px;height:36px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700;margin-bottom:4px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{border:2px dashed var(--line);border-radius:12px;padding:10px}
+.box h3{margin:0 0 8px;font-size:14px;color:var(--sub);font-weight:500}
+.pt{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.pt span{flex:none;width:22px;color:var(--acc);font-weight:700;text-align:center}
+.link{display:grid;grid-template-columns:28px 1fr 2fr 92px 32px;gap:6px;align-items:center;margin-bottom:6px}
+.link select{padding:7px 4px;font-size:14px}
+.link .k{font-size:12px;color:var(--acc)}
+.memo textarea{background:var(--memo);min-height:84px;resize:vertical}
+.memo{margin-top:10px}
+button{font:inherit;font-size:14px;padding:7px 12px;border-radius:10px;border:2px solid var(--acc);background:var(--panel);color:var(--ink);cursor:pointer;white-space:nowrap}
+button.main{background:var(--acc);color:#fff}
+button.x{border-color:var(--line);color:var(--sub);padding:5px 8px}
+button.small{font-size:13px;padding:4px 10px;border-style:dashed}
+button.del{border-color:#f3b4a3;color:#c2410c;background:#fff6f2}
+button{display:inline-flex;align-items:center;gap:6px}
+.ic{width:26px;height:26px;object-fit:contain;vertical-align:middle}
+.ic.big{width:34px;height:34px;margin-right:6px}
+.ic.sm{width:20px;height:20px}
+header h1{display:flex;align-items:center}
+.grip{flex:none;cursor:grab;color:var(--mute);font-size:18px;padding:0 2px;user-select:none}
+.pt.drag,.sec.drag{opacity:.4}
+.pt.over{outline:2px dashed var(--acc);outline-offset:2px;border-radius:10px}
+.sec.over{outline:3px dashed var(--acc);outline-offset:3px}
+.no{cursor:grab}
+.pt button.x{padding:3px 7px}
+.ops{display:flex;gap:6px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:2px solid var(--line);padding:10px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bar .info{flex:1;color:var(--sub);font-size:14px}
+.bar .dirty{color:var(--hot);font-weight:700}
+@media (max-width:760px){.top{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}.sec-head{grid-template-columns:42px 1fr 80px}.sec-head .ops{grid-column:1/-1}}
+#toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:999px;opacity:0;transition:opacity .3s}
+#toast.on{opacity:.92}
+</style>
+</head>
+<body>
+<header><h1><img class="ic big" src="/icon/edit.png" alt="">相談会ナビの編集</h1><button onclick="go('/')"><img class="ic" src="/icon/home.png" alt="">一覧へ</button></header>
+<main>
+  <div class="grid top">
+    <div><label>題名</label><input id="f_title"></div>
+    <div><label>日付</label><input id="f_date" type="date"></div>
+    <div><label>開始</label><input id="f_start" type="time"></div>
+    <div><label>終了</label><input id="f_end" type="time"></div>
+    <div><label>見た目</label><select id="f_theme"><option value="resort">リゾート</option><option value="dark">夜</option><option value="kokuban">黒板</option><option value="shiro">白</option></select></div>
+    <div><label>キャラ</label><select id="f_chara"><option value="">出す</option><option value="off">出さない</option></select></div>
+  </div>
+  <div id="secs"></div>
+  <button class="small" onclick="addSec()"><img class="ic sm" src="/icon/new.png" alt="">話題を足す</button>
+</main>
+<div class="bar"><span class="info" id="info"></span>
+  <button onclick="openDemo()" title="今日見せる画面だけを、新しい窓にまとめて開く"><img class="ic" src="/icon/demo.png" alt="">デモの窓を開く</button>
+  <button onclick="saveAndGo()"><img class="ic" src="/icon/navi.png" alt="">保存して進行ナビへ</button>
+  <button class="main" onclick="save()"><img class="ic" src="/icon/save.png" alt="">保存(Ctrl+S)</button></div>
+<div id="toast"></div>
+<script>
+const N=new URLSearchParams(location.search).get("n");
+let note=null,dirty=false;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");setTimeout(()=>e.classList.remove("on"),1800)}
+function mark(){dirty=true;info()}
+function info(){
+  const total=note.secs.reduce((a,s)=>a+(+s.min||0),0);
+  const [h1,m1]=($("f_start").value||"8:00").split(":").map(Number),[h2,m2]=($("f_end").value||"9:30").split(":").map(Number);
+  const span=(h2*60+m2)-(h1*60+m1);
+  $("info").innerHTML=`話題 ${note.secs.length} 個・合計 ${total} 分(会は ${span} 分)`+(total>span?` <span class="dirty">${total-span}分 はみ出し</span>`:"")+(dirty?` ・ <span class="dirty">未保存</span>`:" ・ 保存済み");
+}
+function tabNumbers(){const urls=[];note.secs.forEach(s=>s.links.forEach(l=>{if(l.url&&!urls.includes(l.url))urls.push(l.url)}));return urls}
+function render(){
+  const urls=tabNumbers();
+  $("secs").innerHTML=note.secs.map((s,i)=>{
+    const pts=[0,1,2].map(j=>`<div class="pt" data-row="${i}:${j}"><span class="grip" draggable="true" data-dragpt="${i}:${j}" title="つかんで並べ替え">⋮⋮</span><span>${j+1}</span><input data-i="${i}" data-pt="${j}" value="${esc(s.points[j]||"")}" placeholder="${j===0?"結論: 一番言いたいこと":j===1?"理由・中身":"実例・見せるもの"}"><button class="x" onclick="clearPt(${i},${j})" title="この要点を消す">✕</button></div>`).join("");
+    const links=s.links.map((l,j)=>`<div class="link"><span class="k">${l.url?"Ctrl+"+(urls.indexOf(l.url)+1):""}</span><input data-i="${i}" data-ln="${j}" data-f="name" value="${esc(l.name)}" placeholder="名前(ChatGPT など)"><input data-i="${i}" data-ln="${j}" data-f="url" value="${esc(l.url)}" placeholder="https://… を貼る"><select data-i="${i}" data-ln="${j}" data-f="pt" title="どこで見せる画面か">${["話題全体","要点1","要点2","要点3"].map((t,v)=>`<option value="${v?v-1:""}"${(l.pt??"")===(v?v-1:"")?" selected":""}>${t}</option>`).join("")}</select><button class="x" onclick="delLink(${i},${j})" title="消す">✕</button></div>`).join("");
+    return `<div class="sec" data-sec="${i}"><div class="sec-head"><div class="no" draggable="true" data-dragsec="${i}" title="つかんで話題を並べ替え">${i+1}</div>
+      <div><label>話題</label><input data-i="${i}" data-f="title" value="${esc(s.title)}"></div>
+      <div><label>分</label><input data-i="${i}" data-f="min" type="number" min="1" max="120" value="${esc(s.min)}"></div>
+      <div class="ops"><button class="x" onclick="move(${i},-1)" title="上へ">↑</button><button class="x" onclick="move(${i},1)" title="下へ">↓</button><button class="del" onclick="delSec(${i})"><img class="ic sm" src="/icon/trash.png" alt="">この話題を消す</button></div></div>
+      <div class="cols"><div class="box"><h3>画面に出す要点(3つまで)</h3>${pts}</div>
+      <div class="box"><h3>見せる画面・メモのURL(デモの窓に並ぶ)</h3>${links}<button class="small" onclick="addLink(${i})">＋ URLを足す</button></div></div>
+      <div class="memo"><label><img class="ic sm" src="/icon/memo.png" alt="">メモ(画面には出ない。話した内容・あとで調べることなど)</label><textarea data-i="${i}" data-f="memo" placeholder="ここは自分用。進行ナビでは N キーで見られる">${esc(s.memo)}</textarea></div></div>`}).join("");
+  info();
+}
+document.addEventListener("input",e=>{
+  const t=e.target;if(!note)return;
+  if(t.id&&t.id.startsWith("f_")){mark();return}
+  const i=t.dataset.i;if(i===undefined)return;const s=note.secs[+i];
+  if(t.dataset.pt!==undefined){s.points[+t.dataset.pt]=t.value}
+  else if(t.dataset.ln!==undefined){s.links[+t.dataset.ln][t.dataset.f]=t.dataset.f==="pt"?(t.value===""?null:+t.value):t.value}
+  else if(t.dataset.f==="min"){s.min=+t.value||10}
+  else s[t.dataset.f]=t.value;
+  mark();
+});
+document.addEventListener("change",e=>{if(e.target.dataset&&e.target.dataset.f==="url")render()});
+function addSec(){note.secs.push({title:"新しい話題",min:10,points:[],links:[],memo:""});mark();render()}
+function delSec(i){if(confirm(`「${note.secs[i].title}」を消しますか?`)){note.secs.splice(i,1);mark();render()}}
+function move(i,d){const j=i+d;if(j<0||j>=note.secs.length)return;[note.secs[i],note.secs[j]]=[note.secs[j],note.secs[i]];mark();render()}
+function slots(s){const a=[0,1,2].map(j=>s.points[j]||"");s.points=a;return a}
+// 要点を消す・動かした時、要点に付けた画面も一緒に付け替える(order = 動かした後の並びに、元の番号を入れたもの)
+function remap(s,order){s.links.forEach(l=>{if(l.pt!=null){const k=order.indexOf(l.pt);l.pt=k<0?null:k}})}
+function clearPt(i,j){const s=note.secs[i],a=slots(s),o=[0,1,2];a.splice(j,1);a.push("");o.splice(j,1);o.push(-1);remap(s,o);mark();render()}
+// ドラッグで並べ替え: 要点は ⋮⋮ を、話題は丸い番号をつかむ
+let dragging=null;
+document.addEventListener("dragstart",e=>{
+  const t=e.target;if(!t.dataset)return;
+  if(t.dataset.dragpt){dragging={kind:"pt",at:t.dataset.dragpt.split(":").map(Number)};t.closest(".pt").classList.add("drag")}
+  else if(t.dataset.dragsec){dragging={kind:"sec",at:+t.dataset.dragsec};t.closest(".sec").classList.add("drag")}
+  else return;
+  e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","x");
+});
+function dropTarget(e){if(!dragging)return null;return dragging.kind==="pt"?e.target.closest(".pt"):e.target.closest(".sec")}
+document.addEventListener("dragover",e=>{const t=dropTarget(e);if(!t)return;e.preventDefault();document.querySelectorAll(".over").forEach(x=>x!==t&&x.classList.remove("over"));t.classList.add("over")});
+document.addEventListener("dragend",()=>{dragging=null;document.querySelectorAll(".over,.drag").forEach(x=>x.classList.remove("over","drag"))});
+document.addEventListener("drop",e=>{
+  const t=dropTarget(e);if(!t)return;e.preventDefault();
+  if(dragging.kind==="pt"){
+    const [si,from]=dragging.at,[ti,to]=t.dataset.row.split(":").map(Number);
+    if(si===ti){const a=slots(note.secs[si]),o=[0,1,2];const [v]=a.splice(from,1);a.splice(to,0,v);o.splice(to,0,o.splice(from,1)[0]);remap(note.secs[si],o)}
+    else{
+      const a=slots(note.secs[si]),b=slots(note.secs[ti]),empty=b.findIndex(x=>!x.trim());
+      if(empty<0){toast("移す先の話題は要点が3つ埋まっています");dragging=null;render();return}
+      const v=a[from];a.splice(from,1);a.push("");b.splice(empty,1);b.splice(to,0,v);
+      const oa=[0,1,2],ob=[0,1,2];oa.splice(from,1);oa.push(-1);ob.splice(empty,1);ob.splice(to,0,-1);
+      remap(note.secs[si],oa);remap(note.secs[ti],ob);  // 別の話題へ移した要点の画面は、元の話題の「話題全体」に残す
+    }
+  }else{const from=dragging.at,to=+t.dataset.sec;const [v]=note.secs.splice(from,1);note.secs.splice(to,0,v)}
+  dragging=null;mark();render();
+});
+function addLink(i){note.secs[i].links.push({name:"",url:""});mark();render()}
+function delLink(i,j){note.secs[i].links.splice(j,1);mark();render()}
+function collect(){
+  const fm=Object.assign({},note.fm,{title:$("f_title").value,date:$("f_date").value,start:$("f_start").value.replace(/^0/,""),end:$("f_end").value.replace(/^0/,""),theme:$("f_theme").value,chara:$("f_chara").value});
+  return{fm,head:note.head,secs:note.secs.map(s=>({...s,points:s.points.map(p=>p||""),links:s.links.filter(l=>l.url&&l.url.trim())}))};
+}
+async function save(){
+  const r=await fetch("/api/note?n="+encodeURIComponent(N),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(collect())}).then(r=>r.json()).catch(()=>({}));
+  if(r.ok){dirty=false;info();toast("保存しました(Obsidian のノートに書き込みました)");return true}
+  toast("保存できませんでした。相談会ナビが終了していないか確かめてください");return false;
+}
+async function saveAndGo(){if(await save())location.href="/navi?n="+encodeURIComponent(N)}
+async function openDemo(){if(dirty&&!(await save()))return;const r=await fetch("/api/demo?n="+encodeURIComponent(N),{method:"POST"}).then(r=>r.json());toast(r.count?`デモの窓を開きました(画面 ${r.count} 個)`:"URL がまだありません")}
+function go(u){if(dirty&&!confirm("保存していない変更があります。保存せずに移りますか?"))return;location.href=u}
+addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();save()}});
+addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue=""}});
+(async()=>{
+  note=await fetch("/api/note?n="+encodeURIComponent(N)).then(r=>r.json());
+  if(note.error){document.querySelector("main").innerHTML="<p>ノートが見つかりません</p>";return}
+  const pad=t=>(t||"").replace(/^(\d):/,"0$1:");
+  $("f_title").value=note.fm.title||"";$("f_date").value=note.fm.date||"";$("f_start").value=pad(note.fm.start||"8:00");$("f_end").value=pad(note.fm.end||"9:30");
+  $("f_theme").value=note.fm.theme||"resort";$("f_chara").value=note.fm.chara==="off"?"off":"";
+  document.title=(note.fm.title||"")+" の編集";render();
+})();
+</script>
+</body>
+</html>
